@@ -41,6 +41,9 @@ async def test_alpha_lab_switching_spanning_tree(testbed):
         ]:
             rc, out = await dd.run_cmd(cmd, sudo=True)
             assert rc == 0, f"failed to run {cmd} rc {rc} out {out}"
+
+        tmpswp = []
+        i=0
         for dd2, links in dd.links_dict.items():
             if (
                 dd2 not in testbed.devices_dict
@@ -59,9 +62,13 @@ async def test_alpha_lab_switching_spanning_tree(testbed):
                     cmd = f"brctl delif {br} {swp}"
                     rc, out = await dd.run_cmd(cmd, sudo=True)
                     assert rc == 0, f"failed to run {cmd} rc {rc} out {out}"
+                tmpswp.append(swp)
+                dd.applog.info(f"Recorded bond0 orignal swp port member to list: {tmpswp[i]}")
+                i=i+1
                 for cmd in [
                     f"ip link set {swp} nomaster",
                     f"brctl addif test_br {swp}",
+                    f"ip link set {swp} up",
                 ]:
                     rc, out = await dd.run_cmd(cmd, sudo=True)
                     dd.applog.info(f"Ran command {cmd} rc {rc} out {out}")
@@ -70,6 +77,36 @@ async def test_alpha_lab_switching_spanning_tree(testbed):
             f"brctl show test_br",
             f"brctl showstp test_br",
             f"brctl delbr test_br",
+            f"ip link set bond0 nomaster",
+            f"ip link set bond0 down",
         ]:
             rc, out = await dd.run_cmd(cmd, sudo=True)
             dd.applog.info(f"Ran command {cmd} rc {rc} out {out}")
+
+        i=0
+        for i in range(len(tmpswp)):
+            dd.applog.info(f"Re-add swp to bond0 info: {tmpswp[i]}")
+            cmd = f"bridge -j link show dev {tmpswp[i]}"
+            rc, out = await dd.run_cmd(cmd, sudo=True)
+            dd.applog.info(f"Ran command {cmd} rc {rc} out {out}")
+            assert rc == 0, f"failed to run {cmd} rc {rc} out {out}"
+            for cmd in [
+                f"ip link set {tmpswp[i]} down",
+                f"ip link set {tmpswp[i]} master bond0",
+                f"ip link set {tmpswp[i]} up",
+            ]:
+                rc, out = await dd.run_cmd(cmd, sudo=True)
+                dd.applog.info(f"Ran {cmd} with rc {rc} {out}")
+
+        for cmd in [
+            f"ip link set bond0 down",
+            f"ip link set bond0 up",
+            f"ip link set bond0 master bridge",
+            f"bridge vlan add vid 100 dev bond0",
+            f"bridge vlan add vid 300 dev bond0",
+            f"bridge vlan add vid 400 dev bond0",
+            f"bridge vlan add vid 500 dev bond0",
+            f"bridge vlan add vid 600 dev bond0",
+        ]:
+            rc, out = await dd.run_cmd(cmd, sudo=True)
+            dd.applog.info(f"Ran {cmd} with rc {rc} {out}")

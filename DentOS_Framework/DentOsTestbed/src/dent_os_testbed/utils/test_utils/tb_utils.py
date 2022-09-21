@@ -44,16 +44,28 @@ async def tb_clean_config_device(d):
             out = await d.scp(file, dst)
     out = await Interface.reload(input_data=[{d.host_name: [{"options": "-a"}]}])
     d.applog.info(out)
+    # enable the service
+    ena_services = [
+        "ntp.service",
+    ]
+    for s in ena_services:
+        out = await Service.enable(
+            input_data=[{d.host_name: [{"name": s}]}],
+        )
+        assert out[0][d.host_name]["rc"] == 0, f"Failed to enable the service {s} {out}"
+
     # restart the service
     services = [
-        #    "networking",
+        "networking.service",
         "frr.service",
+        "ntp.service",
     ]
     for s in services:
         out = await Service.restart(
             input_data=[{d.host_name: [{"name": s}]}],
         )
         assert out[0][d.host_name]["rc"] == 0, f"Failed to restart the service {s} {out}"
+
 
     # await d.reboot()
     # device_up = await d.is_connected()

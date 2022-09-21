@@ -32,7 +32,7 @@ async def test_alpha_lab_static_routing_kernel_route_on_table(testbed):
     Test Procedure:
     1. Kernel route impact on table
     2. test interaction of a kernel route on network
-    3. on eth0 set up dhcp server to send ip and default route and monitor
+    3. on ma1 set up dhcp server to send ip and default route and monitor
     4.  install a static route to tgen port
     5.. then send the packet it should show up in tgen port.
     """
@@ -43,7 +43,7 @@ async def test_alpha_lab_static_routing_kernel_route_on_table(testbed):
     dent_dev = dent_devices[0]
     dent = dent_dev.host_name
     swp_tgen_ports = tgen_dev.links_dict[dent][1]
-    swp = "eth0"
+    swp = "ma1"
 
     out = await IpLink.show(
         input_data=[{dent: [{"device": swp, "cmd_options": "-j"}]}],
@@ -51,8 +51,7 @@ async def test_alpha_lab_static_routing_kernel_route_on_table(testbed):
 
     swp_info = {}
     await tgen_utils_get_swp_info(dent_dev, swp, swp_info)
-    sip = ".".join(swp_info["ip"][:-1] + [str(int(swp[3:]) * 2)])
-
+    sip = ".".join(swp_info["ip"][:-1] + [str(int(swp[2:]) * 2)])
     # start from a clean state
     await IpRoute.add(
         input_data=[
